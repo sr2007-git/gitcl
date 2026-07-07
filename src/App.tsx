@@ -1640,6 +1640,36 @@ Statistics:
     });
   }, [checkAuthSession]);
 
+  // Auto-initialize workspace on login if uninitialized
+  const autoInitRef = useRef(false);
+  useEffect(() => {
+    if (!isAuthenticated) {
+      autoInitRef.current = false;
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && status && !status.isInitialized && !autoInitRef.current && !isLoading) {
+      autoInitRef.current = true;
+      const autoInitialize = async () => {
+        setIsLoading(true);
+        try {
+          const res = await fetch('/api/init', { method: 'POST' });
+          const data = await res.json();
+          if (data.success) {
+            showAlert('Workspace initialized automatically!', 'success');
+            refreshAll();
+          }
+        } catch (e: any) {
+          console.error('Auto-initialization failed:', e);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      autoInitialize();
+    }
+  }, [isAuthenticated, status, isLoading, refreshAll]);
+
   // Update diff when file or parameters change
   useEffect(() => {
     if (isAuthenticated && diffFile) {
@@ -2929,60 +2959,10 @@ Statistics:
       {/* REPOSITORY NOT INITIALIZED SCREEN */}
       {status && !status.isInitialized ? (
         <div className="flex-1 flex flex-col items-center justify-center p-6 md:p-12 max-w-4xl mx-auto space-y-8">
-          <div className="text-center space-y-2 max-w-xl">
-            <div className="p-3 bg-[#D9D8D5] border border-[#141414] mb-3 text-[#141414] shadow-[4px_4px_0px_#141414] w-14 h-14 flex items-center justify-center mx-auto">
-              <GitPullRequest className="w-8 h-8" />
-            </div>
-            <h2 className="text-2xl font-mono font-bold uppercase tracking-tight">VCS Dashboard Uninitialized</h2>
-            <p className="text-sm font-serif italic text-zinc-700 leading-relaxed">
-              Welcome to <span className="font-semibold text-black">gitcl.core</span>. Select an entry path below to unlock either your custom sandbox working directory or the guided visual learning academy.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
-            {/* CARD A: SANDBOX */}
-            <div className="bg-[#F0EFED] border border-[#141414] p-6 shadow-[6px_6px_0px_#141414] flex flex-col justify-between space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-[#141414]/10">
-                  <Plus className="w-5 h-5 text-zinc-700" />
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-[#141414]">Sandbox Explorer Mode</h3>
-                </div>
-                <p className="text-xs font-serif italic text-zinc-600 leading-relaxed">
-                  Start with a clean slate to manually create mockup files, stage modifications, commit revision snapshots, and analyze low-level VCS internals inside your local sandbox.
-                </p>
-              </div>
-              <button
-                onClick={handleInitRepo}
-                disabled={isLoading}
-                className="w-full py-3 bg-[#141414] hover:opacity-90 text-[#E4E3E0] font-mono uppercase tracking-wider text-xs font-bold border border-[#141414] shadow-[3px_3px_0px_#888888] active:translate-y-[1.5px] active:shadow-[1.5px_1.5px_0px_#888888] transition cursor-pointer flex items-center justify-center gap-2"
-                id="init-repo-btn"
-              >
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                <span>Initialize Clean Sandbox</span>
-              </button>
-            </div>
-
-            {/* CARD B: ACADEMY */}
-            <div className="bg-[#EAFAF1] border border-emerald-900 p-6 shadow-[6px_6px_0px_#049669] flex flex-col justify-between space-y-6">
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 pb-2 border-b border-emerald-900/10">
-                  <Award className="w-5 h-5 text-emerald-700" />
-                  <h3 className="text-xs font-mono font-bold uppercase tracking-widest text-emerald-950">VCS Learning Academy</h3>
-                </div>
-                <p className="text-xs font-serif italic text-emerald-900 leading-relaxed">
-                  Jump directly into our interactive, step-by-step challenges! Practice branches, cherry-picking, resolving merge conflicts, and restoring historical commit snapshots.
-                </p>
-              </div>
-              <button
-                onClick={handleInitRepoAndGoToLearn}
-                disabled={isLoading}
-                className="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-mono uppercase tracking-wider text-xs font-bold border border-emerald-900 shadow-[3px_3px_0px_#047857] active:translate-y-[1.5px] active:shadow-[1.5px_1.5px_0px_#047857] transition cursor-pointer flex items-center justify-center gap-2"
-                id="init-repo-learn-btn"
-              >
-                {isLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : null}
-                <span>Start VCS Academy</span>
-              </button>
-            </div>
+          <div className="text-center space-y-4 max-w-xl font-mono">
+            <RefreshCw className="w-10 h-10 animate-spin text-emerald-600 mx-auto" />
+            <h2 className="text-lg font-bold uppercase tracking-widest text-[#141414]">Initializing Workspace...</h2>
+            <p className="text-xs text-zinc-500 italic">Please wait while we automatically set up your custom sandbox repository.</p>
           </div>
         </div>
       ) : (
